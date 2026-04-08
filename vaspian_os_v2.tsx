@@ -19,7 +19,7 @@ const STAFF_ROLES = ["Contract Admin","Project Manager","Installer","Accounting"
 const ROLE_COLOR  = {"Contract Admin":"#e879f9","Project Manager":"#38bdf8","Installer":"#fb923c","Accounting":"#4ade80","Sales":"#fbbf24"};
 const ROLE_ICON   = {"Contract Admin":"📝","Project Manager":"📊","Installer":"🔧","Accounting":"💰","Sales":"💼"};
 
-const NAV_TABS = ["Today","Customers","Projects","Sales","Contract Admin","Project Manager","Installer","Inventory","Accounting","Tasks","Staff","Search"];
+const NAV_TABS = ["Today","Overview","Customers","Projects","Sales","Contract Admin","Project Manager","Installer","Inventory","Accounting","Tasks","Staff","Search"];
 const todayStr = "2026-04-07";
 const today = new Date(todayStr);
 
@@ -44,7 +44,7 @@ function calcRisk(p) {
   return{score:Math.min(100,score),flags};
 }
 const riskColor = s => s>=50?"#f87171":s>=25?"#fbbf24":"#4ade80";
-const calcMargin = p => { const t=(p.billing?.equipInvoiceAmount||0)+(p.billing?.installInvoiceAmount||0);return{total:t,gm:t>0?Math.round(((t-t*0.6)/t)*100):0}; };
+const calcMargin = p => { const t=(p.billing?.equipInvoiceAmount||0)+(p.billing?.installInvoiceAmount||0);const cost=p.billing?.totalCost;if(cost&&cost>0&&t>0){const gm=Math.round(((t-cost)/t)*100);return{total:t,gm,label:gm+"%"};}return{total:t,gm:t>0?40:0,label:t>0?"40% (est.)":"—"}; };
 
 // ── Gate Logic ────────────────────────────────────────────────────────────────
 function getGates(p) {
@@ -329,7 +329,7 @@ function TasksPanel({o,onChange}){
   return <div>{groups.map(g=>{const defs=g.keys.map(k=>({id:k,...(tasks[k]||{done:false,note:"",completedDate:"",label:k})}));const done=defs.filter(d=>d.done).length;return <div key={g.label} style={{marginBottom:14}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,paddingBottom:5,borderBottom:"1px solid #1e2d45"}}><span>{g.icon}</span><span style={{fontWeight:700,fontSize:12,color:g.color}}>{g.label}</span><span style={{fontSize:10,color:done===g.keys.length?"#4ade80":"#4b5563",marginLeft:"auto"}}>{done}/{g.keys.length}</span></div>{defs.map(d=><div key={d.id} style={{background:d.done?"#0d1628":"#080d1a",border:"1px solid "+(d.done?"#4ade8025":"#1e2d45"),borderRadius:7,padding:"9px 11px",marginBottom:5}}><div style={{display:"flex",gap:9,alignItems:"flex-start"}}><input type="checkbox" checked={!!d.done} onChange={()=>toggle(d.id)} style={{marginTop:2,cursor:"pointer"}}/><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between",gap:6,flexWrap:"wrap"}}><span style={{fontWeight:600,fontSize:12,color:d.done?"#4b5563":"#f1f5f9",textDecoration:d.done?"line-through":"none"}}>{d.label}</span>{d.done&&d.completedDate&&<span style={{fontSize:10,color:"#4b5563"}}>✓ {d.completedDate}</span>}</div><input style={{...S.inp,padding:"4px 7px",fontSize:11,marginTop:5}} placeholder="Note…" value={d.note||""} onChange={e=>{const t=tasks[d.id]||{};onChange({...tasks,[d.id]:{...t,note:e.target.value}});}}/></div></div></div>)}</div>;})}  </div>;
 }
 function GoLiveChecklist({checklist,onChange}){const items=[["allPhonesProvisioned","All phones provisioned"],["portConfirmed","Port confirmed live"],["inboundCallsTested","Inbound calls tested"],["outboundCallsTested","Outbound calls tested"],["voicemailConfigured","Voicemail configured"],["autoAttendantTested","Auto-attendant tested"],["adminTrainingComplete","Admin training complete"],["userTrainingComplete","User training complete"],["customerSignoff","Customer sign-off"]];const done=items.filter(([k])=>checklist[k]).length;return <div><div style={{...S.sechdr,display:"flex",justifyContent:"space-between"}}><span>🚀 Go-Live</span><span style={{color:done===items.length?"#4ade80":"#f87171"}}>{done}/{items.length}</span></div>{items.map(([k,label])=><label key={k} style={{display:"flex",gap:8,alignItems:"center",fontSize:12,marginBottom:7,cursor:"pointer"}}><input type="checkbox" checked={!!checklist[k]} onChange={e=>onChange({...checklist,[k]:e.target.checked})}/><span style={{color:checklist[k]?"#4ade80":"#f1f5f9",textDecoration:checklist[k]?"line-through":"none"}}>{label}</span></label>)}</div>;}
-function SupportHandoff({handoff,onChange}){const u=(k,v)=>onChange({...handoff,[k]:v});return <div><div style={S.sechdr}>🤝 Support Handoff</div><div style={S.grid2}><div><label style={S.lbl}>Primary Contact *</label><input style={S.inp} value={handoff.primaryContact||""} onChange={e=>u("primaryContact",e.target.value)}/></div><div><label style={S.lbl}>Escalation Contact *</label><input style={S.inp} value={handoff.escalationContact||""} onChange={e=>u("escalationContact",e.target.value)}/></div></div><div style={{marginTop:8}}><label style={S.lbl}>Special Instructions</label><textarea style={{...S.inp,height:50,resize:"vertical"}} value={handoff.specialInstructions||""} onChange={e=>u("specialInstructions",e.target.value)}/></div><div style={{display:"flex",gap:16,marginTop:8,flexWrap:"wrap"}}><label style={{fontSize:12,display:"flex",gap:6,alignItems:"center"}}><input type="checkbox" checked={!!handoff.openIssuesConfirmed} onChange={e=>u("openIssuesConfirmed",e.target.checked)}/>Open issues confirmed</label><label style={{fontSize:12,display:"flex",gap:6,alignItems:"center"}}><input type="checkbox" checked={!!handoff.monthlyReviewScheduled} onChange={e=>u("monthlyReviewScheduled",e.target.checked)}/>Monthly review scheduled</label></div></div>;}
+function SupportHandoff({handoff,onChange}){const u=(k,v)=>onChange({...handoff,[k]:v});return <div><div style={S.alert("#38bdf8")}>📌 Post-activation provisioning — OS tracks the order lifecycle but phone system provisioning runs in parallel through Syl and Silhouette PBX. Verify with the PM and technical team that all provisioning is complete before marking the handoff done. A project reaching "Client Activated" in OS does not guarantee provisioning is finished in Syl or Silhouette.</div><div style={S.sechdr}>🤝 Support Handoff</div><div style={S.grid2}><div><label style={S.lbl}>Primary Contact *</label><input style={S.inp} value={handoff.primaryContact||""} onChange={e=>u("primaryContact",e.target.value)}/></div><div><label style={S.lbl}>Escalation Contact *</label><input style={S.inp} value={handoff.escalationContact||""} onChange={e=>u("escalationContact",e.target.value)}/></div></div><div style={{marginTop:8}}><label style={S.lbl}>Special Instructions</label><textarea style={{...S.inp,height:50,resize:"vertical"}} value={handoff.specialInstructions||""} onChange={e=>u("specialInstructions",e.target.value)}/></div><div style={{display:"flex",gap:16,marginTop:8,flexWrap:"wrap"}}><label style={{fontSize:12,display:"flex",gap:6,alignItems:"center"}}><input type="checkbox" checked={!!handoff.openIssuesConfirmed} onChange={e=>u("openIssuesConfirmed",e.target.checked)}/>Open issues confirmed</label><label style={{fontSize:12,display:"flex",gap:6,alignItems:"center"}}><input type="checkbox" checked={!!handoff.monthlyReviewScheduled} onChange={e=>u("monthlyReviewScheduled",e.target.checked)}/>Monthly review scheduled</label></div></div>;}
 function ContactLog({p,onChange}){const [form,setForm]=useState({type:"Call",text:"",linkedStage:""});const logs=p.contactLog||[];function add(){if(!form.text.trim())return;onChange([...logs,{id:"cl_"+Date.now(),date:todayStr,type:form.type,author:"Me",text:form.text,linkedStage:form.linkedStage}]);setForm({type:"Call",text:"",linkedStage:""});}const TC={"Call":"#38bdf8","Email":"#a78bfa","Text":"#34d399","Note":"#fbbf24"};return <div><div style={S.sechdr}>📞 Contact Log</div>{logs.length===0&&<div style={{fontSize:11,color:"#4b5563",marginBottom:8}}>No entries yet.</div>}{logs.map(l=><div key={l.id} style={{background:"#0d1628",borderRadius:6,padding:"8px 10px",marginBottom:6,fontSize:11}}><div style={{display:"flex",gap:7,alignItems:"center",marginBottom:3,flexWrap:"wrap"}}><span style={S.badge(TC[l.type]||"#64748b")}>{l.type}</span><span style={{color:"#4b5563"}}>{l.date}</span><span style={{color:"#94a3b8",fontWeight:600}}>{l.author}</span>{l.linkedStage&&<span style={{...S.badge("#34d399"),fontSize:9}}>🔗{l.linkedStage}</span>}</div><div style={{color:"#e2e8f0"}}>{l.text}</div></div>)}<div style={{display:"grid",gridTemplateColumns:"90px 1fr 160px auto",gap:6,marginTop:8,alignItems:"center"}}><select style={{...S.sel,fontSize:11,padding:"5px 8px"}} value={form.type} onChange={e=>setForm(p=>({...p,type:e.target.value}))}>{["Call","Email","Text","Note"].map(v=><option key={v}>{v}</option>)}</select><input style={{...S.inp,fontSize:11,padding:"5px 8px"}} placeholder="Log entry…" value={form.text} onChange={e=>setForm(p=>({...p,text:e.target.value}))}/><select style={{...S.sel,fontSize:11,padding:"5px 8px"}} value={form.linkedStage} onChange={e=>setForm(p=>({...p,linkedStage:e.target.value}))}><option value="">Link to stage…</option>{["Kickoff Call Complete","Install Date Confirmed","Payment Received","Go-Live Confirmed"].map(v=><option key={v}>{v}</option>)}</select><button style={S.btn()} onClick={add}>+ Add</button></div></div>;}
 
 // ── Project Inventory Picker ──────────────────────────────────────────────────
@@ -412,7 +412,8 @@ function ProjectModal({project,customer,catalog,staff,onClose,onSave,onDel}){
       {tab==="inventory"&&<ProjectInventoryPicker inv={f.inventory||{}} catalog={catalog.filter(i=>i.active)} onChange={v=>u("inventory",v)}/>}
       {tab==="billing"&&<div>
         <div style={S.sechdr}>💰 Billing</div>
-        {total>0&&<div style={{background:"#0d1628",borderRadius:6,padding:"8px 12px",marginBottom:10,fontSize:12,display:"flex",gap:16,flexWrap:"wrap"}}><span>Total: <strong style={{color:"#fbbf24"}}>{f$(total)}</strong></span><span>GM: <strong style={{color:calcMargin(f).gm>=40?"#4ade80":"#f87171"}}>{calcMargin(f).gm}%</strong></span>{mrr>0&&<span>MRR: <strong style={{color:"#4ade80"}}>{f$(mrr)}/mo</strong></span>}</div>}
+        {total>0&&<div style={{background:"#0d1628",borderRadius:6,padding:"8px 12px",marginBottom:10,fontSize:12,display:"flex",gap:16,flexWrap:"wrap"}}><span>Total: <strong style={{color:"#fbbf24"}}>{f$(total)}</strong></span><span>GM: <strong style={{color:calcMargin(f).gm>=40?"#4ade80":"#f87171"}}>{calcMargin(f).label}</strong></span>{mrr>0&&<span>MRR: <strong style={{color:"#4ade80"}}>{f$(mrr)}/mo</strong></span>}</div>}
+        <div style={S.alert("#fbbf24")}>⚠️ Pipeline estimate only — MRR and margin figures are app estimates for pipeline visibility. Do not use for revenue forecasting or financial reporting.</div>
         <div style={S.grid2}>
           <div><label style={S.lbl}>Equipment Invoice ($)</label><input style={S.inp} type="number" value={billing.equipInvoiceAmount||0} onChange={e=>u("billing",{...billing,equipInvoiceAmount:+e.target.value})}/></div>
           <div><label style={S.lbl}>Install Invoice ($)</label><input style={S.inp} type="number" value={billing.installInvoiceAmount||0} onChange={e=>u("billing",{...billing,installInvoiceAmount:+e.target.value})}/></div>
@@ -960,6 +961,65 @@ function SearchView({customers,projects,staff,onOpenProject,onSelectCustomer}){
   </div>;
 }
 
+// ── OVERVIEW VIEW ─────────────────────────────────────────────────────────────
+function OverviewView({projects,customers,onOpen}){
+  const [groupFilter,setGroupFilter]=useState("All");
+  const [repFilter,setRepFilter]=useState("All");
+  const [statusFilter,setStatusFilter]=useState("All");
+  const [sortKey,setSortKey]=useState("risk");
+  const [sortDir,setSortDir]=useState("desc");
+  const getCust=p=>customers.find(c=>c.id===p.customerId);
+  const reps=useMemo(()=>["All",...[...new Set(customers.map(c=>c.rep).filter(Boolean))].sort()],[customers]);
+  const STAGE_GROUPS={"Pre-Contract":STAGES_CA,"PM Pipeline":STAGES_PM,"Operations":STAGES_INS,"Complete":STAGES_ACC};
+  function toggleSort(k){if(sortKey===k)setSortDir(d=>d==="asc"?"desc":"asc");else{setSortKey(k);setSortDir("desc");}}
+  function arr(k){return sortKey!==k?" ↕":sortDir==="asc"?" ↑":" ↓";}
+  const filtered=useMemo(()=>{
+    let list=[...projects].filter(p=>!["Closed","Handed to Support"].includes(p.stage));
+    if(groupFilter!=="All"){const stages=STAGE_GROUPS[groupFilter]||[];list=list.filter(p=>stages.includes(p.stage));}
+    if(repFilter!=="All")list=list.filter(p=>getCust(p)?.rep===repFilter);
+    if(statusFilter!=="All")list=list.filter(p=>{const{score,flags}=calcRisk(p);if(statusFilter==="Blocked")return flags.includes("blocked");if(statusFilter==="Aging")return flags.includes("aging")&&!flags.includes("blocked");if(statusFilter==="On Track")return score<25;if(statusFilter==="Unpaid")return flags.includes("unpaid");return true;});
+    return list.sort((a,b)=>{let av,bv;if(sortKey==="company"){av=(getCust(a)?.company||"").toLowerCase();bv=(getCust(b)?.company||"").toLowerCase();}else if(sortKey==="stage"){av=ALL_STAGES.indexOf(a.stage);bv=ALL_STAGES.indexOf(b.stage);}else if(sortKey==="risk"){av=calcRisk(a).score;bv=calcRisk(b).score;}else if(sortKey==="revenue"){av=(a.billing?.equipInvoiceAmount||0)+(a.billing?.installInvoiceAmount||0);bv=(b.billing?.equipInvoiceAmount||0)+(b.billing?.installInvoiceAmount||0);}else if(sortKey==="install"){av=a.installDate||"";bv=b.installDate||"";}else if(sortKey==="days"){av=a.stageEnteredDate?daysSince(a.stageEnteredDate):0;bv=b.stageEnteredDate?daysSince(b.stageEnteredDate):0;}else{av=0;bv=0;}return sortDir==="asc"?(av<bv?-1:av>bv?1:0):(av>bv?-1:av<bv?1:0);});
+  },[projects,groupFilter,repFilter,statusFilter,sortKey,sortDir]);
+  const ss={...S.sel,padding:"6px 9px",fontSize:11};
+  return <div>
+    <div style={{...S.flexWrap,marginBottom:14}}>
+      <StatCard l="Shown" v={filtered.length} c="#38bdf8"/>
+      <StatCard l="Blocked" v={filtered.filter(p=>calcRisk(p).flags?.includes("blocked")).length} c="#f87171"/>
+      <StatCard l="Revenue" v={f$(filtered.reduce((a,p)=>a+(p.billing?.equipInvoiceAmount||0)+(p.billing?.installInvoiceAmount||0),0))} c="#fbbf24"/>
+      <StatCard l="MRR" v={f$(filtered.reduce((a,p)=>a+calcMRR(p.services,p.lines),0))+"/mo"} c="#4ade80"/>
+    </div>
+    <div style={{background:"#111827",border:"1px solid #1e2d45",borderRadius:8,padding:"10px 14px",marginBottom:12,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
+      <div style={{flex:"1 1 130px"}}><label style={S.lbl}>Stage Group</label><select style={ss} value={groupFilter} onChange={e=>setGroupFilter(e.target.value)}><option>All</option>{Object.keys(STAGE_GROUPS).map(g=><option key={g}>{g}</option>)}</select></div>
+      <div style={{flex:"1 1 130px"}}><label style={S.lbl}>Rep</label><select style={ss} value={repFilter} onChange={e=>setRepFilter(e.target.value)}>{reps.map(r=><option key={r}>{r}</option>)}</select></div>
+      <div style={{flex:"1 1 120px"}}><label style={S.lbl}>Status</label><select style={ss} value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>{["All","Blocked","Aging","On Track","Unpaid"].map(v=><option key={v}>{v}</option>)}</select></div>
+      <button style={S.outBtn} onClick={()=>{setGroupFilter("All");setRepFilter("All");setStatusFilter("All");}}>Reset</button>
+    </div>
+    <div style={S.card}><div style={S.cardH}><span style={{fontWeight:700,fontSize:13,color:"#f1f5f9"}}>All Active Orders — {filtered.length}</span></div>
+    <div style={{overflowX:"auto"}}><table style={S.tbl}><thead><tr>
+      {[["company","Company"],["stage","Stage"],["risk","Risk Score"],["revenue","Revenue"],["install","Install Date"],["days","Days in Stage"]].map(([k,l])=>
+        <th key={k} style={{...S.th,cursor:"pointer"}} onClick={()=>toggleSort(k)}>{l}{arr(k)}</th>
+      )}
+      <th style={S.th}>Rep</th><th style={S.th}>Owners</th>
+    </tr></thead>
+    <tbody>{filtered.map(p=>{
+      const cust=getCust(p);const{score,flags}=calcRisk(p);const rc=riskColor(score);
+      const val=(p.billing?.equipInvoiceAmount||0)+(p.billing?.installInvoiceAmount||0);
+      const daysIn=p.stageEnteredDate?daysSince(p.stageEnteredDate):0;
+      const lim=BOTTLENECK[p.stage]||5;
+      return <tr key={p.id} style={{cursor:"pointer"}} onClick={()=>onOpen(p)}>
+        <td style={{...S.td,borderLeft:"3px solid "+rc}}><strong style={{color:"#f1f5f9"}}>{cust?.company}</strong><div style={{fontSize:10,color:"#4b5563"}}>{p.name}</div></td>
+        <td style={S.td}><StageBadge stage={p.stage}/><AgingPill p={p}/></td>
+        <td style={S.td}><RiskBadge score={score}/>{flags.length>0&&<div style={{fontSize:9,color:"#4b5563",marginTop:2}}>{flags.join(", ")}</div>}</td>
+        <td style={{...S.td,fontWeight:600,color:"#fbbf24"}}>{val?f$(val):"—"}</td>
+        <td style={{...S.td,color:"#fb923c"}}>{p.installDate||"—"}</td>
+        <td style={{...S.td,fontWeight:700,color:daysIn>=lim?"#f87171":daysIn>=lim*0.7?"#fbbf24":"#4ade80"}}>{daysIn}d</td>
+        <td style={S.td}>{cust?.rep||"—"}</td>
+        <td style={S.td}><div style={{fontSize:10,color:"#4b5563",lineHeight:1.7}}>{p.assignedCA&&<div>CA: {p.assignedCA}</div>}{p.assignedPM&&<div>PM: {p.assignedPM}</div>}{p.assignedInstaller&&<div>🔧 {p.assignedInstaller}</div>}</div></td>
+      </tr>;
+    })}</tbody></table></div></div>
+  </div>;
+}
+
 // ── APP ROOT ──────────────────────────────────────────────────────────────────
 export default function App(){
   const [customers,setCustomers]=useState(CUSTOMERS0);
@@ -996,7 +1056,7 @@ export default function App(){
   }
 
   const getCust=p=>customers.find(c=>c.id===p.customerId);
-  const LABELS={"Today":"🏠 Today","Customers":"👤 Customers","Projects":"📋 Projects","Sales":"💼 Sales","Contract Admin":"📝 CA","Project Manager":"📊 PM","Installer":"🔧 Installer","Inventory":"📦 Inventory","Accounting":"💰 Accounting","Tasks":"✅ Tasks","Staff":"👥 Staff","Search":"🔍 Search"};
+  const LABELS={"Today":"🏠 Today","Overview":"🗂 Overview","Customers":"👤 Customers","Projects":"📋 Projects","Sales":"💼 Sales","Contract Admin":"📝 CA","Project Manager":"📊 PM","Installer":"🔧 Installer","Inventory":"📦 Inventory","Accounting":"💰 Accounting","Tasks":"✅ Tasks","Staff":"👥 Staff","Search":"🔍 Search"};
 
   return <div style={S.app}>
     <div style={S.nav}>
@@ -1007,7 +1067,7 @@ export default function App(){
       </button>)}
       <div style={{marginLeft:"auto",paddingLeft:6,display:"flex",gap:5,flexShrink:0}}>
         <button style={S.btn("#38bdf8","#000")} onClick={()=>{setZohoTargetCustId(null);setZohoModal(true);}}>🔗 Zoho</button>
-        <button style={S.btn()} onClick={()=>setProjectModal(defaultProject({id:0,customerId:customers[0]?.id||0}))}>+ Project</button>
+        <button style={S.btn()} onClick={()=>setProjectModal(defaultProject({id:0,customerId:customers[0]?.id||0}))}>+ New</button>
       </div>
     </div>
     <div style={{background:"#080d1a",borderBottom:"1px solid #1e2d45",padding:"5px 14px",display:"flex",gap:16,alignItems:"center",fontSize:11,flexWrap:"wrap"}}>
@@ -1020,6 +1080,7 @@ export default function App(){
     </div>
     <div style={S.page}>
       {role==="Today"&&<TodayView projects={activeProjects} customers={customers} pool={syncedPool} onOpenProject={setProjectModal}/>}
+      {role==="Overview"&&<OverviewView projects={activeProjects} customers={customers} onOpen={setProjectModal}/>}
       {role==="Customers"&&!selectedCustomer&&<CustomersView customers={customers} projects={projects} staff={staff} onEditCustomer={c=>setCustomerModal(c)} onNewCustomer={()=>setCustomerModal(defaultCustomer({id:0}))} onSelectCustomer={c=>setSelectedCustomer(c)}/>}
       {role==="Customers"&&selectedCustomer&&<CustomerDetail customer={selectedCustomer} projects={projects} onBack={()=>setSelectedCustomer(null)} onNewProject={()=>setProjectModal(defaultProject({id:0,customerId:selectedCustomer.id}))} onOpenProject={setProjectModal} onNewProjectFromZoho={()=>{setZohoTargetCustId(selectedCustomer.id);setZohoModal(true);}}/>}
       {role==="Projects"&&<ProjectsView projects={projects} customers={customers} onOpenProject={setProjectModal} onNewProject={()=>setProjectModal(defaultProject({id:0,customerId:customers[0]?.id||0}))}/>}
