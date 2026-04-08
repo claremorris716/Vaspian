@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useRef } from "react";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const SERVICES = ["Phone","Soft Phone","Text","Dialer","Speech Analytics"];
@@ -20,7 +20,7 @@ const ROLE_COLOR  = {"Contract Admin":"#e879f9","Project Manager":"#38bdf8","Ins
 const ROLE_ICON   = {"Contract Admin":"📝","Project Manager":"📊","Installer":"🔧","Accounting":"💰","Sales":"💼"};
 
 const NAV_TABS = ["Today","Overview","Customers","Projects","Sales","Contract Admin","Project Manager","Installer","Inventory","Accounting","Tasks","Staff","Search"];
-const todayStr = "2026-04-07";
+const todayStr = new Date().toISOString().slice(0,10);
 const today = new Date(todayStr);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -203,8 +203,17 @@ const S = {
   grid2:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11},
   grid3:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:11},
   flexWrap:{display:"flex",flexWrap:"wrap",gap:10},
+  overlay:{position:"fixed",inset:0,background:"#00000099",display:"flex",alignItems:"center",justifyContent:"center"},
+  modalBox:(w)=>({background:"#111827",borderRadius:12,border:"1px solid #1e2d45",width:w||560,maxWidth:"95vw",maxHeight:"93vh",overflowY:"auto"}),
 };
 const tabStyle = a=>({padding:"12px 8px",fontWeight:600,fontSize:11,cursor:"pointer",color:a?"#38bdf8":"#4b5563",background:"none",border:"none",borderBottom:"2px solid "+(a?"#38bdf8":"transparent"),outline:"none",whiteSpace:"nowrap"});
+
+// ── Modal Wrapper ─────────────────────────────────────────────────────────────
+function Modal({zIndex,width,onClose,children}){
+  return <div style={{...S.overlay,zIndex:zIndex||999}} onClick={e=>{if(e.target===e.currentTarget&&onClose)onClose();}}>
+    <div style={{...S.modalBox(width),padding:24}}>{children}</div>
+  </div>;
+}
 
 // ── Shared UI ─────────────────────────────────────────────────────────────────
 function StatCard({l,v,c,onClick}){return <div onClick={onClick} style={{background:c+"15",border:"1px solid "+c+"30",borderRadius:8,padding:"10px 14px",minWidth:110,flex:"1 1 110px",cursor:onClick?"pointer":"default"}}><div style={{fontSize:20,fontWeight:800,color:"#f1f5f9"}}>{v}</div><div style={{fontSize:11,color:c,marginTop:2,fontWeight:600}}>{l}</div></div>;}
@@ -280,8 +289,7 @@ const FAKE_ZOHO={"ZD-2001":{company:"Lockport Medical Group",contact:"Dr. Kim Le
 function ZohoImportModal({onImport,onClose}){
   const [dealId,setDealId]=useState("");const [status,setStatus]=useState("idle");const [result,setResult]=useState(null);
   function doFetch(){if(!dealId.trim())return;setStatus("loading");setTimeout(()=>{const r=FAKE_ZOHO[dealId.trim().toUpperCase()];if(r){setResult({...r,zohoDealId:dealId.trim().toUpperCase()});setStatus("found");}else setStatus("notfound");},800);}
-  return <div style={{position:"fixed",inset:0,background:"#00000099",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1100}}>
-    <div style={{background:"#111827",borderRadius:12,padding:24,width:500,maxWidth:"95vw",border:"1px solid #1e2d45"}}>
+  return <Modal zIndex={1100} width={500} onClose={onClose}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><span style={{fontWeight:800,fontSize:15,color:"#38bdf8"}}>🔗 Import from Zoho CRM</span><button style={S.outBtn} onClick={onClose}>✕</button></div>
       <div style={S.alert("#38bdf8")}>Enter a Zoho Deal ID. Try ZD-2001 or ZD-2002.</div>
       <div style={{display:"flex",gap:8,marginTop:10,marginBottom:12}}><input style={{...S.inp,flex:1}} placeholder="e.g. ZD-2001" value={dealId} onChange={e=>setDealId(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doFetch()}/><button style={S.btn()} onClick={doFetch}>{status==="loading"?"…":"Fetch Deal"}</button></div>
@@ -295,8 +303,7 @@ function ZohoImportModal({onImport,onClose}){
         </div>
         <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><button style={S.outBtn} onClick={onClose}>Cancel</button><button style={S.btn("#4ade80","#000")} onClick={()=>onImport(result)}>✓ Create Project</button></div>
       </div>}
-    </div>
-  </div>;
+  </Modal>;
 }
 
 // ── Document Manager ──────────────────────────────────────────────────────────
@@ -357,8 +364,7 @@ function ProjectModal({project,customer,catalog,staff,onClose,onSave,onDel}){
   const mrr=calcMRR(f.services,f.lines);const billing=f.billing||{};const total=(billing.equipInvoiceAmount||0)+(billing.installInvoiceAmount||0);
   const TABS=["details","gates","tasks","inventory","billing","go-live","handoff","contact-log","documents"];
   const TL={"details":"📋 Details","gates":"🔒 Gates","tasks":"✅ Tasks ("+tasksDone+"/"+taskDefs.length+")","inventory":"📦 Inventory","billing":"💰 Billing","go-live":"🚀 Go-Live","handoff":"🤝 Handoff","contact-log":"📞 Log","documents":"📎 Docs ("+f.documents.length+")"};
-  return <div style={{position:"fixed",inset:0,background:"#00000099",display:"flex",alignItems:"center",justifyContent:"center",zIndex:999}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-    <div style={{background:"#111827",borderRadius:12,padding:20,width:720,maxWidth:"96vw",maxHeight:"93vh",overflowY:"auto",border:"1px solid #1e2d45"}}>
+  return <Modal width={720} onClose={onClose}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
         <div><div style={{fontWeight:800,fontSize:15,color:"#f1f5f9"}}>{customer?.company||"—"} · {f.name||"New Project"}</div><div style={{fontSize:11,color:"#4b5563",marginTop:2}}>{f.zohoLinked&&<span style={{...S.badge("#38bdf8"),marginRight:6}}>🔗{f.zohoDealId}</span>}{mrr>0&&<span style={S.badge("#4ade80")}>MRR {f$(mrr)}/mo</span>}</div></div>
         <div style={{display:"flex",gap:6,alignItems:"center"}}><RiskBadge score={score}/><button style={S.outBtn} onClick={onClose}>✕</button></div>
@@ -434,15 +440,13 @@ function ProjectModal({project,customer,catalog,staff,onClose,onSave,onDel}){
         <div style={{display:"flex",gap:8}}>{project.id&&<button style={S.btn("#ef4444")} onClick={()=>onDel(project.id)}>Delete</button>}{ns&&<button title={!ca?"Gates not met":undefined} style={{...S.btn(ca?"#4ade80":"#374151",ca?"#000":"#6b7280"),cursor:ca?"pointer":"not-allowed"}} onClick={()=>{if(ca)onSave({...f,stage:ns,stageEnteredDate:todayStr});}}>{ ca?"✓":"🔒"} → {ns}</button>}</div>
         <div style={{display:"flex",gap:8}}><button style={S.outBtn} onClick={onClose}>Cancel</button><button style={S.btn()} onClick={()=>onSave(f)}>Save</button></div>
       </div>
-    </div>
-  </div>;
+  </Modal>;
 }
 
 // ── Customer Modal ────────────────────────────────────────────────────────────
 function CustomerModal({customer,staff,onClose,onSave,onDel}){
   const [f,setF]=useState({...customer});const u=(k,v)=>setF(p=>({...p,[k]:v}));
-  return <div style={{position:"fixed",inset:0,background:"#00000099",display:"flex",alignItems:"center",justifyContent:"center",zIndex:999}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-    <div style={{background:"#111827",borderRadius:12,padding:24,width:560,maxWidth:"95vw",border:"1px solid #1e2d45"}}>
+  return <Modal width={560} onClose={onClose}>
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}><span style={{fontWeight:800,fontSize:15,color:"#f1f5f9"}}>{customer.id?"Edit Customer":"New Customer"}</span><button style={S.outBtn} onClick={onClose}>✕</button></div>
       <div style={S.grid2}>
         <div><label style={S.lbl}>Company *</label><input style={S.inp} value={f.company||""} onChange={e=>u("company",e.target.value)}/></div>
@@ -458,16 +462,14 @@ function CustomerModal({customer,staff,onClose,onSave,onDel}){
         {customer.id&&<button style={S.btn("#ef4444")} onClick={()=>onDel(customer.id)}>Delete</button>}
         <div style={{display:"flex",gap:8,marginLeft:"auto"}}><button style={S.outBtn} onClick={onClose}>Cancel</button><button style={S.btn()} onClick={()=>{if(f.company.trim())onSave(f);}}>Save</button></div>
       </div>
-    </div>
-  </div>;
+  </Modal>;
 }
 
 // ── STAFF MODAL ───────────────────────────────────────────────────────────────
 function StaffModal({member,onClose,onSave,onDel}){
   const [f,setF]=useState({...member});const u=(k,v)=>setF(p=>({...p,[k]:v}));
   function toggleRole(r){setF(p=>({...p,roles:p.roles.includes(r)?p.roles.filter(x=>x!==r):[...p.roles,r]}));}
-  return <div style={{position:"fixed",inset:0,background:"#00000099",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1050}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-    <div style={{background:"#111827",borderRadius:12,padding:24,width:520,maxWidth:"95vw",border:"1px solid #1e2d45"}}>
+  return <Modal zIndex={1050} width={520} onClose={onClose}>
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}><span style={{fontWeight:800,fontSize:15,color:"#f1f5f9"}}>{member.id&&member.name?`Edit: ${member.name}`:"New Staff Member"}</span><button style={S.outBtn} onClick={onClose}>✕</button></div>
       <div style={S.grid2}>
         <div style={{gridColumn:"1/-1"}}><label style={S.lbl}>Full Name *</label><input style={S.inp} value={f.name||""} onChange={e=>u("name",e.target.value)}/></div>
@@ -488,8 +490,7 @@ function StaffModal({member,onClose,onSave,onDel}){
         {member.id&&<button style={S.btn("#ef4444")} onClick={()=>onDel(member.id)}>Remove</button>}
         <div style={{display:"flex",gap:8,marginLeft:"auto"}}><button style={S.outBtn} onClick={onClose}>Cancel</button><button style={S.btn()} onClick={()=>{if(f.name.trim())onSave(f);}}>Save</button></div>
       </div>
-    </div>
-  </div>;
+  </Modal>;
 }
 
 // ── STAFF VIEW ────────────────────────────────────────────────────────────────
@@ -871,8 +872,7 @@ function TasksView({projects,customers,staff,onSave}){
 // ── INVENTORY VIEW ────────────────────────────────────────────────────────────
 function ItemModal({item,onSave,onClose,onDelete}){
   const [f,setF]=useState({...item});const u=(k,v)=>setF(p=>({...p,[k]:v}));
-  return <div style={{position:"fixed",inset:0,background:"#00000099",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1200}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-    <div style={{background:"#111827",borderRadius:12,padding:22,width:500,maxWidth:"95vw",border:"1px solid #1e2d45"}}>
+  return <Modal zIndex={1200} width={500} onClose={onClose}>
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}><span style={{fontWeight:800,fontSize:15,color:"#f1f5f9"}}>{item._exists?"Edit Item":"New Item"}</span><button style={S.outBtn} onClick={onClose}>✕</button></div>
       <div style={S.grid2}>
         <div><label style={S.lbl}>Category *</label><select style={S.sel} value={f.category} onChange={e=>u("category",e.target.value)}>{ITEM_CATEGORIES.map(c=><option key={c}>{c}</option>)}</select></div>
@@ -889,8 +889,7 @@ function ItemModal({item,onSave,onClose,onDelete}){
         {item._exists&&<button style={S.btn("#ef4444")} onClick={()=>onDelete(item.id)}>Delete</button>}
         <div style={{display:"flex",gap:8,marginLeft:"auto"}}><button style={S.outBtn} onClick={onClose}>Cancel</button><button style={S.btn()} onClick={()=>{if(f.model.trim())onSave(f);}}>Save</button></div>
       </div>
-    </div>
-  </div>;
+  </Modal>;
 }
 
 function InventoryView({projects,pool,setPool}){
